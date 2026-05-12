@@ -22,7 +22,7 @@ const Dashboard = () => {
     if (data) {
       setStats({
         totalLeads: data.length,
-        qualificados: data.filter(l => l.score_engajamento && l.score_engajamento >= 50).length,
+        qualificados: data.filter(l => l.score && l.score >= 50).length,
         prontoHandoff: data.filter(l => l.fase_funil === 'pronto_handoff').length,
         descartados: data.filter(l => l.fase_funil === 'descartado').length
       });
@@ -82,13 +82,13 @@ const Dashboard = () => {
                   <MessageSquare size={18} color="var(--text-tertiary)" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{lead.nome_empresa || lead.telefone}</div>
+                  <div style={{ fontWeight: 600 }}>{lead.empresa || lead.whatsapp}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{lead.segmento || 'Sem segmento'}</div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{lead.fase_funil.replace('_', ' ')}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Score: {lead.score_engajamento || '-'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Score: {lead.score || '-'}</div>
               </div>
             </div>
           ))}
