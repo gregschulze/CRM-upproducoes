@@ -31,12 +31,12 @@ const Chat = () => {
 
   useEffect(() => {
     if (selectedLead) {
-      fetchMessages(selectedLead.telefone);
-      
+      fetchMessages(selectedLead.whatsapp);
+
       // Subscribe to chat histories
       const channel = supabase.channel('realtime_chat')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'n8n_chat_histories' }, (payload) => {
-          if (payload.new.session_id === selectedLead.telefone) {
+          if (payload.new.session_id === selectedLead.whatsapp) {
             setMessages(prev => [...prev, payload.new as ChatMessage]);
             scrollToBottom();
           }
@@ -62,20 +62,20 @@ const Chat = () => {
       .from('leads')
       .select('*')
       .order('ultima_interacao', { ascending: false, nullsFirst: false });
-    
+
     if (!error && data) {
       setLeads(data);
     }
     setLoading(false);
   };
 
-  const fetchMessages = async (telefone: string) => {
+  const fetchMessages = async (whatsapp: string) => {
     const { data, error } = await supabase
       .from('n8n_chat_histories')
       .select('*')
-      .eq('session_id', telefone)
+      .eq('session_id', whatsapp)
       .order('id', { ascending: true });
-      
+
     if (!error && data) {
       setMessages(data);
       scrollToBottom();
@@ -91,12 +91,12 @@ const Chat = () => {
   const togglePausaIA = async () => {
     if (!selectedLead) return;
     const newState = !selectedLead.pausar_ia;
-    
+
     const { error } = await supabase
       .from('leads')
       .update({ pausar_ia: newState })
       .eq('id', selectedLead.id);
-      
+
     if (!error) {
       setSelectedLead({ ...selectedLead, pausar_ia: newState });
     }
@@ -104,7 +104,7 @@ const Chat = () => {
 
   const sendMessage = async () => {
     if (!inputText.trim() || !selectedLead) return;
-    
+
     const textToSend = inputText;
     setInputText('');
 
@@ -118,7 +118,7 @@ const Chat = () => {
             'apikey': EVOLUTION_API_TOKEN
           },
           body: JSON.stringify({
-            number: selectedLead.telefone,
+            number: selectedLead.whatsapp,
             text: textToSend
           })
         });
@@ -128,7 +128,7 @@ const Chat = () => {
 
       // 2. Inserir no n8n_chat_histories para a IA ter o contexto no futuro
       const newMessage = {
-        session_id: selectedLead.telefone,
+        session_id: selectedLead.whatsapp,
         message: {
           type: 'ai', // Trata o humano como a assistente (a empresa)
           content: textToSend,
@@ -152,18 +152,18 @@ const Chat = () => {
           <h3>Conversas</h3>
         </div>
         <div className="chat-lead-list">
-          {loading ? <p className="loading-text">Carregando...</p> : 
+          {loading ? <p className="loading-text">Carregando...</p> :
             leads.map(lead => (
-              <div 
-                key={lead.id} 
+              <div
+                key={lead.id}
                 className={`chat-lead-item ${selectedLead?.id === lead.id ? 'active' : ''}`}
                 onClick={() => setSelectedLead(lead)}
               >
                 <div className="lead-avatar">
-                  {lead.nome_empresa ? lead.nome_empresa.substring(0,2).toUpperCase() : <User size={18} />}
+                  {lead.empresa ? lead.empresa.substring(0, 2).toUpperCase() : <User size={18} />}
                 </div>
                 <div className="lead-details">
-                  <span className="lead-name">{lead.nome_empresa || lead.telefone}</span>
+                  <span className="lead-name">{lead.empresa || lead.whatsapp}</span>
                   <span className="lead-phase">{lead.fase_funil.replace('_', ' ')}</span>
                 </div>
                 {lead.pausar_ia && <Hand size={14} className="paused-icon" color="var(--warning)" />}
@@ -179,10 +179,10 @@ const Chat = () => {
           <>
             <div className="chat-header">
               <div className="chat-header-info">
-                <h2>{selectedLead.nome_empresa || selectedLead.telefone}</h2>
-                <span className="subtitle">{selectedLead.segmento || 'Sem segmento'} • Score: {selectedLead.score_engajamento || '-'}</span>
+                <h2>{selectedLead.empresa || selectedLead.whatsapp}</h2>
+                <span className="subtitle">{selectedLead.segmento || 'Sem segmento'} • Score: {selectedLead.score || '-'}</span>
               </div>
-              <button 
+              <button
                 className={`btn-toggle-ia ${selectedLead.pausar_ia ? 'paused' : 'active'}`}
                 onClick={togglePausaIA}
               >
@@ -212,12 +212,12 @@ const Chat = () => {
             <div className="chat-input-area">
               {!selectedLead.pausar_ia && (
                 <div className="warning-banner">
-                  <Bot size={14} /> 
+                  <Bot size={14} />
                   A IA está ativa! Recomenda-se clicar em "Assumir Conversa" antes de mandar mensagens manuais para evitar que o bot também responda o lead.
                 </div>
               )}
               <div className="input-group">
-                <textarea 
+                <textarea
                   placeholder="Digite sua mensagem..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}

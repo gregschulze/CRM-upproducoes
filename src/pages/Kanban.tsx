@@ -9,10 +9,10 @@ import './Kanban.css';
 // Types
 export type Lead = {
   id: string;
-  telefone: string;
-  nome_empresa: string | null;
+  whatsapp: string;
+  empresa: string | null;
   segmento: string | null;
-  score_engajamento: number | null;
+  score: number | null;
   fase_funil: string;
   ultima_interacao: string | null;
   pausar_ia: boolean;
@@ -171,13 +171,13 @@ const Kanban = () => {
                             {...provided.dragHandleProps}
                           >
                             <div className="card-top">
-                              <span className="empresa-nome">{lead.nome_empresa || lead.telefone}</span>
-                              {lead.score_engajamento !== null && (
+                              <span className="empresa-nome">{lead.empresa || lead.whatsapp}</span>
+                              {lead.score !== null && (
                                 <span 
                                   className="score-badge" 
-                                  style={{ color: getScoreColor(lead.score_engajamento), borderColor: getScoreColor(lead.score_engajamento) }}
+                                  style={{ color: getScoreColor(lead.score), borderColor: getScoreColor(lead.score) }}
                                 >
-                                  {lead.score_engajamento}
+                                  {lead.score}
                                 </span>
                               )}
                             </div>
