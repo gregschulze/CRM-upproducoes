@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import './Configuracao.css';
 
 type ConfigItem = {

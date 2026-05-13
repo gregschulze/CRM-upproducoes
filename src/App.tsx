@@ -5,6 +5,7 @@ import Configuracao from './pages/Configuracao';
 import Kanban from './pages/Kanban';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
+import Campanhas from './pages/Campanhas';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="funil" element={<Kanban />} />
           <Route path="chat" element={<Chat />} />
+          <Route path="campanhas" element={<Campanhas />} />
           <Route path="configuracao" element={<Configuracao />} />
         </Route>
       </Routes>

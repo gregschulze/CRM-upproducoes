@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { Send, Hand, User, Bot } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Send, Hand, User, Bot, MessageSquare } from 'lucide-react';
 import './Chat.css';
 import type { Lead } from './Kanban';
 
@@ -245,8 +245,5 @@ const Chat = () => {
     </div>
   );
 };
-
-// Componente helper pro empty state
-import { MessageSquare } from 'lucide-react';
 
 export default Chat;

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import type { DropResult } from '@hello-pangea/dnd';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import LeadDetailDrawer from '@/components/LeadDetailDrawer';
+import { Eye, Hand } from 'lucide-react';
 import './Kanban.css';
 
 // Types
@@ -32,6 +35,8 @@ const COLUMNS = [
 const Kanban = () => {
   const [leads, setLeads] = useState<Record<string, Lead[]>>({});
   const [loading, setLoading] = useState(true);
+  const [drawerLead, setDrawerLead] = useState<Lead | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Inicializa o state de colunas vazias
   const initCols = () => {
@@ -134,6 +139,11 @@ const Kanban = () => {
     }
   };
 
+  const openLeadDetail = (lead: Lead) => {
+    setDrawerLead(lead);
+    setDrawerOpen(true);
+  };
+
   if (loading && Object.keys(leads).length === 0) {
     return <div className="kanban-page"><p className="loading-text">Carregando funil...</p></div>;
   }
@@ -142,7 +152,7 @@ const Kanban = () => {
     <div className="kanban-page animate-fade-in">
       <div className="page-header">
         <h1 className="text-gradient-primary">Funil SDR</h1>
-        <p className="text-secondary">Arraste os leads entre as fases. Atualizações ocorrem em tempo real.</p>
+        <p className="text-secondary" style={{ color: 'var(--text-secondary)' }}>Arraste os leads entre as fases. Atualizações ocorrem em tempo real.</p>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
@@ -185,9 +195,31 @@ const Kanban = () => {
                             
                             <div className="card-footer">
                               <span className="time-ago">{timeAgo(lead.ultima_interacao)}</span>
-                              {lead.pausar_ia && (
-                                <span className="ai-paused-badge" title="IA Pausada para este lead">✋ Humano</span>
-                              )}
+                              <div className="flex items-center gap-1.5">
+                                {lead.pausar_ia && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="ai-paused-badge"><Hand size={10} /> Humano</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-zinc-900 border-zinc-700 text-xs">
+                                      IA pausada — controle humano ativo
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      className="p-1 rounded-md hover:bg-white/10 transition-colors text-zinc-500 hover:text-white"
+                                      onClick={(e) => { e.stopPropagation(); openLeadDetail(lead); }}
+                                    >
+                                      <Eye size={13} />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="bg-zinc-900 border-zinc-700 text-xs">
+                                    Ver detalhes do lead
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -201,6 +233,12 @@ const Kanban = () => {
           ))}
         </div>
       </DragDropContext>
+
+      <LeadDetailDrawer
+        lead={drawerLead}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   );
 };
