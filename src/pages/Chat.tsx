@@ -22,13 +22,76 @@ const Chat = () => {
   const location = useLocation();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const selectedLeadRef = useRef<Lead | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Update ref whenever selectedLead changes
+  useEffect(() => {
+    selectedLeadRef.current = selectedLead;
+  }, [selectedLead]);
+
   useEffect(() => {
     fetchLeads();
+
+    // Global subscriptions
+    const channel = supabase.channel('realtime_chat')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'n8n_chat_histories' }, (payload) => {
+        const newMessage = payload.new as ChatMessage;
+        const currentSelectedLead = selectedLeadRef.current;
+        
+        if (currentSelectedLead && newMessage.session_id === currentSelectedLead.whatsapp) {
+          setMessages(prev => {
+            if (prev.some(m => m.id === newMessage.id)) return prev;
+            const newMsgs = [...prev, newMessage];
+            return newMsgs.sort((a, b) => a.id - b.id);
+          });
+          scrollToBottom();
+        }
+
+        // Atualizar ultima_interacao na lista e reordenar para o topo
+        setLeads(prev => {
+          const leadIndex = prev.findIndex(l => l.whatsapp === newMessage.session_id);
+          if (leadIndex === -1) return prev;
+          
+          const updatedLead = { ...prev[leadIndex], ultima_interacao: new Date().toISOString() };
+          const newLeads = [...prev];
+          newLeads[leadIndex] = updatedLead;
+          
+          return newLeads.sort((a, b) => {
+            const dateA = a.ultima_interacao ? new Date(a.ultima_interacao).getTime() : 0;
+            const dateB = b.ultima_interacao ? new Date(b.ultima_interacao).getTime() : 0;
+            return dateB - dateA;
+          });
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'leads' }, (payload) => {
+        const updatedLead = payload.new as Lead;
+        setLeads(prev => {
+          const exists = prev.some(l => l.id === updatedLead.id);
+          const newLeads = exists 
+            ? prev.map(l => l.id === updatedLead.id ? updatedLead : l)
+            : [...prev, updatedLead];
+
+          return newLeads.sort((a, b) => {
+            const dateA = a.ultima_interacao ? new Date(a.ultima_interacao).getTime() : 0;
+            const dateB = b.ultima_interacao ? new Date(b.ultima_interacao).getTime() : 0;
+            return dateB - dateA;
+          });
+        });
+        
+        setSelectedLead(prev => {
+           if (prev && prev.id === updatedLead.id) return updatedLead;
+           return prev;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -45,40 +108,6 @@ const Chat = () => {
   useEffect(() => {
     if (selectedLead) {
       fetchMessages(selectedLead.whatsapp);
-
-      // Subscribe to chat histories
-      const channel = supabase.channel('realtime_chat')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'n8n_chat_histories' }, (payload) => {
-          if (payload.new.session_id === selectedLead.whatsapp) {
-            setMessages(prev => [...prev, payload.new as ChatMessage]);
-            scrollToBottom();
-          }
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'leads' }, (payload) => {
-          const updatedLead = payload.new as Lead;
-          setLeads(prev => {
-            const exists = prev.some(l => l.id === updatedLead.id);
-            const newLeads = exists 
-              ? prev.map(l => l.id === updatedLead.id ? updatedLead : l)
-              : [...prev, updatedLead]; // Case it didn't exist before
-
-            return newLeads.sort((a, b) => {
-              const dateA = a.ultima_interacao ? new Date(a.ultima_interacao).getTime() : 0;
-              const dateB = b.ultima_interacao ? new Date(b.ultima_interacao).getTime() : 0;
-              return dateB - dateA;
-            });
-          });
-          
-          setSelectedLead(prev => {
-             if (prev && prev.id === updatedLead.id) return updatedLead;
-             return prev;
-          });
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [selectedLead]);
 
