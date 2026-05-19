@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Send, Hand, User, Bot, MessageSquare } from 'lucide-react';
 import './Chat.css';
@@ -18,6 +19,7 @@ const EVOLUTION_API_TOKEN = import.meta.env.VITE_EVOLUTION_API_TOKEN;
 const EVOLUTION_INSTANCE = import.meta.env.VITE_EVOLUTION_INSTANCE || 'UpBDR';
 
 const Chat = () => {
+  const location = useLocation();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -28,6 +30,17 @@ const Chat = () => {
   useEffect(() => {
     fetchLeads();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const leadIdParam = params.get('leadId');
+    if (leads.length > 0 && leadIdParam) {
+      const leadToSelect = leads.find(l => l.id === leadIdParam);
+      if (leadToSelect && (!selectedLead || selectedLead.id !== leadToSelect.id)) {
+        setSelectedLead(leadToSelect);
+      }
+    }
+  }, [location.search, leads, selectedLead]);
 
   useEffect(() => {
     if (selectedLead) {
@@ -42,11 +55,24 @@ const Chat = () => {
           }
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'leads' }, (payload) => {
-          if (payload.new.id === selectedLead.id) {
-            setSelectedLead(payload.new as Lead);
-            // Atualizar na lista tbm
-            setLeads(prev => prev.map(l => l.id === payload.new.id ? payload.new as Lead : l));
-          }
+          const updatedLead = payload.new as Lead;
+          setLeads(prev => {
+            const exists = prev.some(l => l.id === updatedLead.id);
+            const newLeads = exists 
+              ? prev.map(l => l.id === updatedLead.id ? updatedLead : l)
+              : [...prev, updatedLead]; // Case it didn't exist before
+
+            return newLeads.sort((a, b) => {
+              const dateA = a.ultima_interacao ? new Date(a.ultima_interacao).getTime() : 0;
+              const dateB = b.ultima_interacao ? new Date(b.ultima_interacao).getTime() : 0;
+              return dateB - dateA;
+            });
+          });
+          
+          setSelectedLead(prev => {
+             if (prev && prev.id === updatedLead.id) return updatedLead;
+             return prev;
+          });
         })
         .subscribe();
 
@@ -137,7 +163,10 @@ const Chat = () => {
       };
 
       await supabase.from('n8n_chat_histories').insert([newMessage]);
-      // Não precisamos dar push no state local pois o subscription do realtime já vai puxar o INSERT acima.
+      
+      const now = new Date().toISOString();
+      await supabase.from('leads').update({ ultima_interacao: now }).eq('id', selectedLead.id);
+      // Não precisamos dar push no state local pois o subscription do realtime já vai puxar o INSERT e UPDATE acima.
 
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +73,7 @@ type Props = {
 };
 
 const LeadDetailDrawer = ({ lead, open, onOpenChange }: Props) => {
+  const navigate = useNavigate();
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [apresentacao, setApresentacao] = useState<Apresentacao | null>(null);
   const [followups, setFollowups] = useState<Followup[]>([]);
@@ -198,11 +200,23 @@ const LeadDetailDrawer = ({ lead, open, onOpenChange }: Props) => {
           </div>
         </SheetHeader>
 
-        {/* Score Bar */}
+        {/* Score Bar & Actions */}
         <div className="px-6 pb-4">
           <div className="flex justify-between items-center mb-1.5">
             <span className="text-xs text-zinc-400 font-medium">Score de qualificação</span>
-            <span className="text-sm font-bold text-white">{lead.score || 0}/100</span>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/chat?leadId=${lead.id}`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium rounded-md transition-colors"
+              >
+                <MessageSquare size={14} />
+                Abrir Conversa
+              </button>
+              <span className="text-sm font-bold text-white">{lead.score || 0}/100</span>
+            </div>
           </div>
           <Progress value={scorePercent} className="h-2" />
         </div>
