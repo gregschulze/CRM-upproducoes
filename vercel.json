@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd crm && npm install && npm run build",
+  "outputDirectory": "crm/dist",
+  "installCommand": "echo 'skip root install'"
+}
